@@ -1,0 +1,7 @@
+not_c: "It is 3 AM"
+
+c: "The sun is shining"
+
+a: "It is Summer"
+
+a and c -> not b: "It is summer and the sun is shining, therefore it is not raining"
