@@ -1,0 +1,56 @@
+from mathesis.grammars import Grammar
+import yaml
+from mathesis.semantics.truth_table import ClassicalTruthTable
+
+class MyGrammar(Grammar):
+    grammar_rules = r"""
+?fml: conjunction
+    | disjunction
+    | conditional
+    | negation
+    | universal
+    | particular
+    | atom
+    | _subfml
+
+PREDICATE: /\w+/ | "⊤" | "⊥"
+TERM: /\w+/
+
+atom : PREDICATE ("(" TERM ("," TERM)* ")")?
+negation : "not" _subfml
+conjunction : (conjunction | _subfml) "and" _subfml
+disjunction : (disjunction | _subfml) "or" _subfml
+conditional : _subfml "->" _subfml
+necc : "□" _subfml
+poss : "◇" _subfml
+universal : "∀" TERM _subfml
+particular : "∃" TERM _subfml
+
+_unary : negation | necc | poss | universal | particular
+_subfml : "(" fml ")" | _unary | atom
+
+%import common.WS
+%ignore WS
+""".lstrip() 
+
+# Load your YAML data (replace 'your_yaml_file.yaml' with your actual file)
+def load_yaml(file_path):
+    with open(file_path, 'r') as file:
+        return yaml.safe_load(file)
+
+# Load your YAML data (replace 'your_yaml_file.yaml' with your actual file)
+yaml_data = load_yaml('statement_v2.yml')
+
+
+statements = list(yaml_data.values())
+
+print(statements)
+
+grammar = MyGrammar()
+
+# Translate yaml file into defined logical grammar
+fml = grammar.parse(statements)
+table = ClassicalTruthTable(fml[0])
+
+print(fml)
+print(table)
