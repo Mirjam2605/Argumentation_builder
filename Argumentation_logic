@@ -1,37 +1,6 @@
-from mathesis.grammars import Grammar
 import yaml
-from mathesis.semantics.truth_table import ClassicalTruthTable
+import ttg
 
-class MyGrammar(Grammar):
-    grammar_rules = r"""
-?fml: conjunction
-    | disjunction
-    | conditional
-    | negation
-    | universal
-    | particular
-    | atom
-    | _subfml
-
-PREDICATE: /\w+/ | "⊤" | "⊥"
-TERM: /\w+/
-
-atom : PREDICATE ("(" TERM ("," TERM)* ")")?
-negation : "not" _subfml
-conjunction : (conjunction | _subfml) "and" _subfml
-disjunction : (disjunction | _subfml) "or" _subfml
-conditional : _subfml "->" _subfml
-necc : "□" _subfml
-poss : "◇" _subfml
-universal : "∀" TERM _subfml
-particular : "∃" TERM _subfml
-
-_unary : negation | necc | poss | universal | particular
-_subfml : "(" fml ")" | _unary | atom
-
-%import common.WS
-%ignore WS
-""".lstrip() 
 
 # Load your YAML data (replace 'your_yaml_file.yaml' with your actual file)
 def load_yaml(file_path):
@@ -43,14 +12,47 @@ yaml_data = load_yaml('statement_v2.yml')
 
 
 statements = list(yaml_data.values())
+num_state = len(statements)
+prop_expr = []
+
+# divide statements into atoms and propositional expressions
+for statement in statements:
+    if len(statement) != 1 :
+        prop_expr.append(statement)
+        statements.remove(statement)
 
 print(statements)
+print(prop_expr)
 
-grammar = MyGrammar()
+# Find H is consistent
 
-# Translate yaml file into defined logical grammar
-fml = grammar.parse(statements)
-table = ClassicalTruthTable(fml[0])
+# build truth table
+truth_table = ttg.Truths(statements, prop_expr).as_pandas #table not right until now!
 
-print(fml)
-print(table)
+print(truth_table)
+
+
+support_candidates = []
+
+# 1. consistent: all 1 in a row
+for col in truth_table.columns:
+    support_candidates.append([col])
+
+for i in range(num_state):
+    x = truth_table.iloc[i]
+    support = x.index[x == 1].tolist()
+    support_candidates.append(support)
+print(support_candidates) # c,a missing and a, not c missing ?
+
+# 2. conclusion entailment
+
+# find h for every H
+i = 0
+for support in support_candidates:
+
+    if len(support) == 1 and "=>" not in support: # h for one variable candidate is the same as H finding arrow doesnt work right now
+        h = support[0]
+        support_candidates[i].append(h)
+        i = i+1
+    
+print(support_candidates)

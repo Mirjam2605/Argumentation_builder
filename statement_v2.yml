@@ -4,5 +4,5 @@ statement 2: "c"
 
 statement 3: "a"
 
-statement 4: "(a and c) -> not b"
+statement 4: "(a and c) => not b"
 
