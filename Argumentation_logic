@@ -1,6 +1,7 @@
 import yaml
 import ttg
-from itertools import chain, combinations
+from itertools import chain, combinations, groupby
+from operator import itemgetter
 
 # Load your YAML data (replace 'your_yaml_file.yaml' with your actual file)
 def load_yaml(file_path):
@@ -33,7 +34,7 @@ for statement in statements:
     else:
         atoms.append(statement)
 
-# Find H is consistent: All statements combinations which are true in truth table
+# 1. Find H is consistent: All statements combinations which are true in truth table
 
 #find all statement combinations
 statement_combinations = list(powerset(statements))
@@ -41,7 +42,9 @@ statement_combinations = [list(ele) for ele in statement_combinations]
 
 # build truth table
 truth_table = ttg.Truths(atoms, prop_expr, ints=False).as_pandas #table not right until now!
-#print(truth_table)
+print("Truth-Table:")
+print(truth_table)
+print()
 #check truth for statement combinations
 support_candidates = []
 for statements in statement_combinations:
@@ -50,18 +53,17 @@ for statements in statement_combinations:
         if b:
             support_candidates.append(statements) 
             break
-#print(support_candidates)  
+print("support_candidates:")
+print(support_candidates)  
+print()
 
 # 2. conclusion entailment
 
 # find h for every H
-
 argument_candidates = []
 for support in support_candidates:
-    used = False
     for element in support:
         if ("=>" in element):  #h for implies statements
-            #print(element) 
              # Split the string using the arrow symbol
             supp, h = element.split("=>")
             # Remove leading/trailing spaces
@@ -69,13 +71,43 @@ for support in support_candidates:
             argument = [support, h]
             argument_candidates.append(argument)
             used = True
-    if used:
-        print(support)
-        support_candidates.remove(support) 
-print(support_candidates)
-for support in support_candidates:          
-    if len(support) == 1: # h for one variable candidate
-            argument = [[support[0]], support[0]]
+
+#update support candidates by removing used statements for arguments
+support_candidates_updated = [entry for entry in support_candidates if "=>" not in "".join(entry)]
+
+#create H,h pair for all basic support candidates without =>
+for support in support_candidates_updated:
+    for element in support:          
+            argument = [support, element]
             argument_candidates.append(argument)
-    
-#print(argument_candidates)
+print("argument candidates:")   
+print(argument_candidates)
+print()
+
+# 3. Find Pairs with H minimal
+arguments_final = []
+
+# grouping list based on their conclusion
+combined_dict = {}
+for sublist in argument_candidates:
+    last_arg = sublist[-1]
+    other_args = sublist[:-1]
+
+    # Add to the dictionary
+    if last_arg not in combined_dict:
+        combined_dict[last_arg] = []
+    combined_dict[last_arg].extend(other_args)
+
+# take minimal value for conclusion
+# Create a new dictionary with the shortest sublist for each key
+arguments_final = {key: min(sublists, key=len) for key, sublists in combined_dict.items()}
+
+print("Final arguments:")
+print(arguments_final) 
+
+
+# Put Arguments in dictionary structure
+
+# Build Argumentation Graph
+
+# Claculate properties of arguments
