@@ -39,10 +39,11 @@ def create_arguments(file):
     statement_combinations = [list(ele) for ele in statement_combinations]
 
     # build truth table
-    truth_table = ttg.Truths(atoms, prop_expr, ints=False).as_pandas #table not right until now!
+    truth_table = ttg.Truths(atoms, prop_expr, ints=False).as_pandas 
     print("Truth-Table:")
     print(truth_table)
     print()
+
     #check truth for statement combinations
     support_candidates = []
     for statements in statement_combinations:
@@ -52,13 +53,14 @@ def create_arguments(file):
                 support_candidates.append(statements) 
                 break
     print("support_candidates:")
-    print(support_candidates)  
+    print(*support_candidates,sep='\n')
     print()
 
     # 2. conclusion entailment
 
     # find h for every H
     argument_candidates = []
+    atoms_for_conclusions = atoms.copy()
     for support in support_candidates:
         for element in support:
             if ("=>" in element):  #h for implies statements
@@ -68,7 +70,8 @@ def create_arguments(file):
                 h = h.strip()
                 argument = [support, h]
                 argument_candidates.append(argument)
-                used = True
+                atoms_for_conclusions.append(h)
+    atoms_for_conclusions = list(set(atoms_for_conclusions))
 
     #update support candidates by removing used statements for arguments
     support_candidates_updated = [entry for entry in support_candidates if "=>" not in "".join(entry)]
@@ -79,15 +82,34 @@ def create_arguments(file):
                 argument = [support, element]
                 argument_candidates.append(argument)
     print("argument candidates:")   
-    print(argument_candidates)
+    print(*argument_candidates,sep='\n')
     print()
+
+    # build truth table
+    truth_table_h = ttg.Truths(atoms_for_conclusions, prop_expr, ints=False).as_pandas 
+    print("Truth-Table with h:")
+    print(truth_table_h)
+    print()
+
+    argument_candidates_final = []
+    for arguments in argument_candidates:
+        boolean = truth_table_h[arguments[0]].all(axis=1)
+        conclusion_truth_values = []
+        for i, b in enumerate(boolean):
+            if b:
+                conclusion_truth_values.append(truth_table_h.iloc[i][arguments[1]])
+        if all(conclusion_truth_values):
+            argument_candidates_final.append(arguments)
+
+    print("final arg candidates:")
+    print(*argument_candidates_final,sep='\n')
 
     # 3. Find Pairs with H minimal
     arguments_final = []
 
     # grouping list based on their conclusion
     combined_dict = {}
-    for sublist in argument_candidates:
+    for sublist in argument_candidates_final:
         last_arg = sublist[-1]
         other_args = sublist[:-1]
 
@@ -95,42 +117,57 @@ def create_arguments(file):
         if last_arg not in combined_dict:
             combined_dict[last_arg] = []
         combined_dict[last_arg].extend(other_args)
-
+  
     # take minimal value for conclusion
     # Create a new dictionary with the shortest sublist for each key
-    arguments_min = {key: min(sublists, key=len) for key, sublists in combined_dict.items()}
-
-    arguments_final = {key: value[0] for key, value in arguments_min.items()}
+    #arguments_min = {key: min(sublists, key=len) for key, sublists in combined_dict.items()}
+    arguments_final = []
+    for conc in combined_dict.keys():
+        possible_supports = combined_dict[conc]
+        for supp in possible_supports:
+            powerset_supp = list(powerset(supp))
+            powerset_supp.remove(tuple(supp))
+            minimal = True
+            for power in powerset_supp:
+                if list(power) in possible_supports:
+                    minimal = False
+                    break
+            if minimal:
+                arguments_final.append([supp, conc])
+            
+    #arguments_final = {value[0]: key for key, value in arguments_min.items()}
 
 
 
     print("Final arguments:")
-    print(arguments_final) 
+    print(*arguments_final,sep='\n') 
     return arguments_final
 
 #Better with defining attack function before?
 def create_argumentation_graph(data):
     G = nx.MultiDiGraph()
-    for key, value in data.items():
-        G.add_node(value)
-        if value.startswith('not'):
-            # Remove the 'not_' prefix to get the attacked node
-            attacked_node = value[4:]
-            attacker = value
-            G.add_edge(attacked_node, key)
-            for key, value in data.items():
-                if attacker[4:] in value:
+    for conc, supp in data.items():
+        G.add_node(supp)
+        if conc.startswith('not'):
+            # Remove the 'not' prefix to get the attacked node
+            attacked_node = conc[4:]
+            attacker = conc
+            G.add_edge(attacked_node, attacker)
+            for conc, supp in data.items():
+                if attacker[4:] in supp:
                      #Add the attack edge
-                    G.add_edge(attacker, value)
+                    G.add_edge(attacker, supp)
     G.remove_edges_from(nx.selfloop_edges(G))
     # Erstelle ein neues Mapping, das die Knoten als "A1", "A2", "A3", ... benennt
     new_mapping = {node: f"A{idx}" for idx, node in enumerate(G.nodes(), start=1)}
     G = nx.relabel_nodes(G, new_mapping)
     return G, new_mapping
 
-# build arguments
-arguments = create_arguments("statement_v2.yml")
 
+# build arguments
+arguments = create_arguments("statement.yml")
+
+"""
 # Create the argumentation graph
 argumentation_graph, mapping = create_argumentation_graph(arguments)
 new_mapping = {v: k for k, v in mapping.items()}
@@ -166,4 +203,4 @@ plt.plot([], [], ' ', label=str(new_mapping))
 plt.legend(loc='upper left')
 plt.savefig('Argumentation_Graph.png')
 plt.show()
-plt.close()
+plt.close() """

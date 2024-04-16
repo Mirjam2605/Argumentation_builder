@@ -1,7 +1,15 @@
-not_c: "It is 3 AM"
+statement 1: "a"
 
-c: "The sun is shining"
+statement 2: "a => b"
 
-a: "It is Summer"
+statement 3: "c => not b"
 
-a and c -> not b: "It is summer and the sun is shining, therefore it is not raining"
+statement 4: "c"
+
+statement 5: "d"
+
+statement 6: "d => b"
+
+statement 7: "not a"
+
+statement 8: "not c"
