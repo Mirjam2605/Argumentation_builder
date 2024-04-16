@@ -1,6 +1,3 @@
-import yaml
-
-
 class ArgumentationFramework:
     def __init__(self):
         self.arguments = set()
@@ -36,27 +33,21 @@ class ArgumentationFramework:
 # Example usage: This needs to be interpreted from an input file: YAML
 # Build arguments out of statements from the file
 # Define attacks with attack function
-af = ArgumentationFramework()
-af.add_argument("A")
-af.add_argument("B")
-af.add_argument("C")
-af.add_argument("D")
-af.add_attack("A", "B")
-af.add_attack("B", "C")
-af.add_attack("C", "D")
+# af = ArgumentationFramework()
+# af.add_argument("A")
+# af.add_argument("B")
+# af.add_argument("C")
+# af.add_argument("D")
+# af.add_attack("A", "B")
+# af.add_attack("B", "C")
+# af.add_attack("C", "D")
 
 # Check if a set of arguments is conflict-free
-print(af.is_conflict_free({"A", "C"}))  # True
+#print(af.is_conflict_free({"A", "C"}))  # True
 
 # Check if a set of arguments is admissible
-print(af.is_admissible({"A", "C"}))  # True
+#print(af.is_admissible({"A", "C"}))  # True
 
 
-# Specify the path to your YAML file
-yaml_file_path = "statement.yml"
 
-# Read the YAML file
-with open(yaml_file_path, "r") as f:
-    data = yaml.safe_load(f)
-print(data)
 

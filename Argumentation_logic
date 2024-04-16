@@ -1,113 +1,169 @@
 import yaml
 import ttg
-from itertools import chain, combinations, groupby
-from operator import itemgetter
+from itertools import chain, combinations
+import networkx as nx
+import matplotlib.pyplot as plt
+from Argumentation_Builder import ArgumentationFramework
 
 # Load your YAML data (replace 'your_yaml_file.yaml' with your actual file)
 def load_yaml(file_path):
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
+# find all combinations 
 def powerset(iterable):
     "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(1, len(s)+1))
 
-def state_in_row(state, df):
-    for s in state:
-        if df.loc[df[s] == True]:
-            return True
-
-# Load your YAML data (replace 'your_yaml_file.yaml' with your actual file)
-yaml_data = load_yaml('statement_v2.yml')
+def create_arguments(file):
+    # Load your YAML data (replace 'your_yaml_file.yaml' with your actual file)
+    yaml_data = load_yaml(file)
 
 
-statements = list(yaml_data.values())
-num_state = len(statements)
-prop_expr = []
-atoms = []
+    statements = list(yaml_data.values())
+    prop_expr = []
+    atoms = []
 
-# divide statements into atoms and propositional expressions
-for statement in statements:
-    if len(statement) != 1 :
-        prop_expr.append(statement)
-    else:
-        atoms.append(statement)
+    # divide statements into atoms and propositional expressions
+    for statement in statements:
+        if len(statement) != 1 :
+            prop_expr.append(statement)
+        else:
+            atoms.append(statement)
 
-# 1. Find H is consistent: All statements combinations which are true in truth table
+    # 1. Find H is consistent: All statements combinations which are true in truth table
 
-#find all statement combinations
-statement_combinations = list(powerset(statements))
-statement_combinations = [list(ele) for ele in statement_combinations]
+    #find all statement combinations
+    statement_combinations = list(powerset(statements))
+    statement_combinations = [list(ele) for ele in statement_combinations]
 
-# build truth table
-truth_table = ttg.Truths(atoms, prop_expr, ints=False).as_pandas #table not right until now!
-print("Truth-Table:")
-print(truth_table)
-print()
-#check truth for statement combinations
-support_candidates = []
-for statements in statement_combinations:
-    boolean = truth_table[statements].all(axis=1)
-    for b in boolean:
-        if b:
-            support_candidates.append(statements) 
-            break
-print("support_candidates:")
-print(support_candidates)  
-print()
+    # build truth table
+    truth_table = ttg.Truths(atoms, prop_expr, ints=False).as_pandas #table not right until now!
+    print("Truth-Table:")
+    print(truth_table)
+    print()
+    #check truth for statement combinations
+    support_candidates = []
+    for statements in statement_combinations:
+        boolean = truth_table[statements].all(axis=1)
+        for b in boolean:
+            if b:
+                support_candidates.append(statements) 
+                break
+    print("support_candidates:")
+    print(support_candidates)  
+    print()
 
-# 2. conclusion entailment
+    # 2. conclusion entailment
 
-# find h for every H
-argument_candidates = []
-for support in support_candidates:
-    for element in support:
-        if ("=>" in element):  #h for implies statements
-             # Split the string using the arrow symbol
-            supp, h = element.split("=>")
-            # Remove leading/trailing spaces
-            h = h.strip()
-            argument = [support, h]
-            argument_candidates.append(argument)
-            used = True
+    # find h for every H
+    argument_candidates = []
+    for support in support_candidates:
+        for element in support:
+            if ("=>" in element):  #h for implies statements
+                # Split the string using the arrow symbol
+                supp, h = element.split("=>")
+                # Remove leading/trailing spaces
+                h = h.strip()
+                argument = [support, h]
+                argument_candidates.append(argument)
+                used = True
 
-#update support candidates by removing used statements for arguments
-support_candidates_updated = [entry for entry in support_candidates if "=>" not in "".join(entry)]
+    #update support candidates by removing used statements for arguments
+    support_candidates_updated = [entry for entry in support_candidates if "=>" not in "".join(entry)]
 
-#create H,h pair for all basic support candidates without =>
-for support in support_candidates_updated:
-    for element in support:          
-            argument = [support, element]
-            argument_candidates.append(argument)
-print("argument candidates:")   
-print(argument_candidates)
-print()
+    #create H,h pair for all basic support candidates without =>
+    for support in support_candidates_updated:
+        for element in support:          
+                argument = [support, element]
+                argument_candidates.append(argument)
+    print("argument candidates:")   
+    print(argument_candidates)
+    print()
 
-# 3. Find Pairs with H minimal
-arguments_final = []
+    # 3. Find Pairs with H minimal
+    arguments_final = []
 
-# grouping list based on their conclusion
-combined_dict = {}
-for sublist in argument_candidates:
-    last_arg = sublist[-1]
-    other_args = sublist[:-1]
+    # grouping list based on their conclusion
+    combined_dict = {}
+    for sublist in argument_candidates:
+        last_arg = sublist[-1]
+        other_args = sublist[:-1]
 
-    # Add to the dictionary
-    if last_arg not in combined_dict:
-        combined_dict[last_arg] = []
-    combined_dict[last_arg].extend(other_args)
+        # Add to the dictionary
+        if last_arg not in combined_dict:
+            combined_dict[last_arg] = []
+        combined_dict[last_arg].extend(other_args)
 
-# take minimal value for conclusion
-# Create a new dictionary with the shortest sublist for each key
-arguments_final = {key: min(sublists, key=len) for key, sublists in combined_dict.items()}
+    # take minimal value for conclusion
+    # Create a new dictionary with the shortest sublist for each key
+    arguments_min = {key: min(sublists, key=len) for key, sublists in combined_dict.items()}
 
-print("Final arguments:")
-print(arguments_final) 
+    arguments_final = {key: value[0] for key, value in arguments_min.items()}
 
 
-# Put Arguments in dictionary structure
 
-# Build Argumentation Graph
+    print("Final arguments:")
+    print(arguments_final) 
+    return arguments_final
+
+#Better with defining attack function before?
+def create_argumentation_graph(data):
+    G = nx.MultiDiGraph()
+    for key, value in data.items():
+        G.add_node(value)
+        if value.startswith('not'):
+            # Remove the 'not_' prefix to get the attacked node
+            attacked_node = value[4:]
+            attacker = value
+            G.add_edge(attacked_node, key)
+            for key, value in data.items():
+                if attacker[4:] in value:
+                     #Add the attack edge
+                    G.add_edge(attacker, value)
+    G.remove_edges_from(nx.selfloop_edges(G))
+    # Erstelle ein neues Mapping, das die Knoten als "A1", "A2", "A3", ... benennt
+    new_mapping = {node: f"A{idx}" for idx, node in enumerate(G.nodes(), start=1)}
+    G = nx.relabel_nodes(G, new_mapping)
+    return G, new_mapping
+
+# build arguments
+arguments = create_arguments("statement_v2.yml")
+
+# Create the argumentation graph
+argumentation_graph, mapping = create_argumentation_graph(arguments)
+new_mapping = {v: k for k, v in mapping.items()}
+
 
 # Claculate properties of arguments
+af = ArgumentationFramework()
+for node in argumentation_graph.nodes:
+    af.add_argument(node)
+
+for edge in argumentation_graph.edges:
+    af.add_attack(edge[0], edge[1])
+
+# Check if a set of arguments is conflict-free
+set_arg = {"A1", "A2"}
+if af.is_conflict_free(set_arg):
+    print(f"{set_arg} is conflict free")
+else:
+    print(f"{set_arg} is not conflict free")
+
+# Check if a set of arguments is admissible
+if af.is_admissible(set_arg):
+    print(f"{set_arg} is admissible")
+else:
+    print(f"{set_arg} is not admissible")
+
+#show argumentation graph
+fig = plt.figure()
+pos = nx.spring_layout(argumentation_graph, seed=42)
+nx.draw(argumentation_graph, pos, with_labels=True, node_size=800, node_color='skyblue', font_size=10)
+plt.title("Argumentation Graph")
+plt.plot([], [], ' ', label=str(new_mapping))
+plt.legend(loc='upper left')
+plt.savefig('Argumentation_Graph.png')
+plt.show()
+plt.close()
