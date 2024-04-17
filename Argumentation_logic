@@ -145,6 +145,23 @@ def create_arguments(file):
     print() 
     return arguments_final
 
+#find attacks between arguments
+def create_attacks(arguments, framework):
+    #determine attacks: direct defeater (DD) attack function:
+    #compare every conclusion with support of other elements, check if negation is in it
+    for i in range(len(arguments)):
+        conclusion = arguments[i][1]
+        if conclusion.startswith('not'):
+            for j, support in enumerate(arguments):
+                if conclusion[4:] in support[0]:
+                    framework.add_attack(('arg{}'.format(i+1)), ('arg{}'.format(j+1))) 
+        else:
+            for j, support in enumerate(arguments):
+                if ("not "+conclusion) in support[0]:
+                    framework.add_attack(('arg{}'.format(i+1)), ('arg{}'.format(j+1)))
+    #print("direct defeater attacks:")
+    #print(framework.attacks)   
+
 #Better with defining attack function before?
 def create_argumentation_graph(af):
     G = nx.MultiDiGraph()
@@ -156,10 +173,10 @@ def create_argumentation_graph(af):
     #new_mapping = {node: f"A{idx}" for idx, node in enumerate(G.nodes(), start=1)}
     #G = nx.relabel_nodes(G, new_mapping)
     return G
-
+    
 
 # build arguments
-arguments = create_arguments("statement_v1.yml")
+arguments = create_arguments("statement_v2.yml")
 
 # create dictionary with numbers for argument
 argument_dict = {}
@@ -177,32 +194,13 @@ af = ArgumentationFramework()
 for argument in argument_dict.keys():
     af.add_argument(argument)
 
-#determine attacks: direct defeater
-#find a conclusion which is negation of element in other supports
-#support: arguments[:][0]
-#conclusion: arguments[:][1]
-
-#compare every conclusion with support of other elements, check if negation is in it
-for i in range(len(arguments)):
-    conclusion = arguments[i][1]
-    if conclusion.startswith('not'):
-        for j, support in enumerate(arguments):
-            if conclusion[4:] in support[0]:
-                af.add_attack(('arg{}'.format(i+1)), ('arg{}'.format(j+1))) 
-    else:
-        for j, support in enumerate(arguments):
-            if ("not "+conclusion) in support[0]:
-                af.add_attack(('arg{}'.format(i+1)), ('arg{}'.format(j+1)))
-
+# create attacks and add them to argumentation framework
+create_attacks(arguments, af)
 print("direct defeater attacks:")
 print(af.attacks)
-#for attack in af.attacks:
-   # print(attack[0])
-
 
 #create argument_graph
 argumentation_graph = create_argumentation_graph(af)
-
 
 # Check if a set of arguments is conflict-free
 set_arg = {"arg1", "arg2"}
