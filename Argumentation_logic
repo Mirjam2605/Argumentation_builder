@@ -103,6 +103,7 @@ def create_arguments(file):
 
     print("final arg candidates:")
     print(*argument_candidates_final,sep='\n')
+    print()
 
     # 3. Find Pairs with H minimal
     arguments_final = []
@@ -140,49 +141,71 @@ def create_arguments(file):
 
 
     print("Final arguments:")
-    print(*arguments_final,sep='\n') 
+    print(*arguments_final,sep='\n')
+    print() 
     return arguments_final
 
 #Better with defining attack function before?
-def create_argumentation_graph(data):
+def create_argumentation_graph(af):
     G = nx.MultiDiGraph()
-    for conc, supp in data.items():
-        G.add_node(supp)
-        if conc.startswith('not'):
-            # Remove the 'not' prefix to get the attacked node
-            attacked_node = conc[4:]
-            attacker = conc
-            G.add_edge(attacked_node, attacker)
-            for conc, supp in data.items():
-                if attacker[4:] in supp:
-                     #Add the attack edge
-                    G.add_edge(attacker, supp)
-    G.remove_edges_from(nx.selfloop_edges(G))
+    for argument in af.arguments:
+        G.add_node(argument)
+    for attack in af.attacks:
+        G.add_edge(attack[0], attack[1])
     # Erstelle ein neues Mapping, das die Knoten als "A1", "A2", "A3", ... benennt
-    new_mapping = {node: f"A{idx}" for idx, node in enumerate(G.nodes(), start=1)}
-    G = nx.relabel_nodes(G, new_mapping)
-    return G, new_mapping
+    #new_mapping = {node: f"A{idx}" for idx, node in enumerate(G.nodes(), start=1)}
+    #G = nx.relabel_nodes(G, new_mapping)
+    return G
 
 
 # build arguments
-arguments = create_arguments("statement.yml")
+arguments = create_arguments("statement_v2.yml")
 
-"""
-# Create the argumentation graph
-argumentation_graph, mapping = create_argumentation_graph(arguments)
-new_mapping = {v: k for k, v in mapping.items()}
+# create dictionary with numbers for argument
+argument_dict = {}
 
+for j in range(len(arguments)):
+    key_j = 'arg{}'.format(j+1)  # a string depending on j
+    argument_dict[key_j] = arguments[j]
 
-# Claculate properties of arguments
+print("argument names:")
+print(argument_dict)
+print()
+
+# add Arguments to Argumentation framework
 af = ArgumentationFramework()
-for node in argumentation_graph.nodes:
-    af.add_argument(node)
+for argument in argument_dict.keys():
+    af.add_argument(argument)
 
-for edge in argumentation_graph.edges:
-    af.add_attack(edge[0], edge[1])
+#determine attacks: direct defeater
+#find a conclusion which is negation of element in other supports
+#support: arguments[:][0]
+#conclusion: arguments[:][1]
+
+#compare every conclusion with support of other elements, check if negation is in it
+for i in range(len(arguments)):
+    conclusion = arguments[i][1]
+    if conclusion.startswith('not'):
+        for j, support in enumerate(arguments):
+            if conclusion[4:] in support[0]:
+                af.add_attack(('arg{}'.format(i+1)), ('arg{}'.format(j+1))) 
+    else:
+        for j, support in enumerate(arguments):
+            if ("not "+conclusion) in support[0]:
+                af.add_attack(('arg{}'.format(i+1)), ('arg{}'.format(j+1)))
+
+print("direct defeater attacks:")
+print(af.attacks)
+#for attack in af.attacks:
+   # print(attack[0])
+
+
+#create argument_graph
+argumentation_graph = create_argumentation_graph(af)
+
 
 # Check if a set of arguments is conflict-free
-set_arg = {"A1", "A2"}
+set_arg = {"arg1", "arg2"}
 if af.is_conflict_free(set_arg):
     print(f"{set_arg} is conflict free")
 else:
@@ -199,8 +222,8 @@ fig = plt.figure()
 pos = nx.spring_layout(argumentation_graph, seed=42)
 nx.draw(argumentation_graph, pos, with_labels=True, node_size=800, node_color='skyblue', font_size=10)
 plt.title("Argumentation Graph")
-plt.plot([], [], ' ', label=str(new_mapping))
+plt.plot([], [], ' ', label=str(argument_dict))
 plt.legend(loc='upper left')
 plt.savefig('Argumentation_Graph.png')
 plt.show()
-plt.close() """
+plt.close() 
