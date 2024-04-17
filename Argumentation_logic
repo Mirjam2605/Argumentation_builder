@@ -159,7 +159,7 @@ def create_argumentation_graph(af):
 
 
 # build arguments
-arguments = create_arguments("statement_v2.yml")
+arguments = create_arguments("statement_v1.yml")
 
 # create dictionary with numbers for argument
 argument_dict = {}
@@ -207,14 +207,18 @@ argumentation_graph = create_argumentation_graph(af)
 # Check if a set of arguments is conflict-free
 set_arg = {"arg1", "arg2"}
 if af.is_conflict_free(set_arg):
+    print()
     print(f"{set_arg} is conflict free")
 else:
+    print()
     print(f"{set_arg} is not conflict free")
 
 # Check if a set of arguments is admissible
 if af.is_admissible(set_arg):
+    print()
     print(f"{set_arg} is admissible")
 else:
+    print()
     print(f"{set_arg} is not admissible")
 
 #show argumentation graph
