@@ -20,7 +20,6 @@ def create_arguments(file):
     # Load your YAML data (replace 'your_yaml_file.yaml' with your actual file)
     yaml_data = load_yaml(file)
 
-
     statements = list(yaml_data.values())
     prop_expr = []
     atoms = []
@@ -176,7 +175,8 @@ def create_argumentation_graph(af):
     
 
 # build arguments
-arguments = create_arguments("statement_v2.yml")
+arguments = create_arguments("statement_v1.yml")
+
 
 # create dictionary with numbers for argument
 argument_dict = {}
@@ -221,11 +221,11 @@ else:
 
 #show argumentation graph
 fig = plt.figure()
-pos = nx.spring_layout(argumentation_graph, seed=42)
-nx.draw(argumentation_graph, pos, with_labels=True, node_size=800, node_color='skyblue', font_size=10)
+pos = nx.planar_layout(argumentation_graph)#, seed=42)
+nx.draw_networkx(argumentation_graph, pos, with_labels=True, node_size=3000, node_color='skyblue',
+                  font_size=20, arrowsize=30, label=str("\n".join([str(a) for a in argument_dict.items()])))
 plt.title("Argumentation Graph")
-plt.plot([], [], ' ', label=str(argument_dict))
-plt.legend(loc='upper left')
+plt.legend(loc='best',fontsize="10", markerscale=0)
 plt.savefig('Argumentation_Graph.png')
 plt.show()
 plt.close() 
